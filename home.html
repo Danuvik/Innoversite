@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credit Risk Gauge - Home</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f0f2f5;
+        }
+        .container {
+            max-width: 800px;
+        }
+        .drop-zone {
+            border: 2px dashed #0d6efd;
+            border-radius: 0.5rem;
+            padding: 50px;
+            text-align: center;
+            color: #0d6efd;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .drop-zone.dragover {
+            background-color: #e9ecef;
+            border-style: solid;
+        }
+        .drop-zone-text {
+            pointer-events: none; /* Make text non-interactive so drop works everywhere */
+        }
+        .results-card .card-body {
+            color: white;
+        }
+        .results-card .display-4 {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container my-5">
+        <div class="text-center mb-4">
+            <h1 class="display-5">Credit Risk Gauge </h1>
+            <a href="search.html" class="btn btn-outline-primary mt-3">Go to Search Page</a>
+        </div>
+
+        <div class="card shadow-sm" id="upload-card">
+            <div class="card-body p-4">
+                <h5 class="card-title mb-3">1. Upload Application Batch</h5>
+                
+                <input type="file" id="file-input" class="d-none" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+                
+                <div id="drop-zone" class="drop-zone">
+                    <p class="drop-zone-text" id="drop-zone-text">
+                        Drag & Drop your file here <br> or <br> <strong>Click to Browse</strong>
+                    </p>
+                </div>
+
+                <div class="d-grid mt-4">
+                    <button class="btn btn-primary btn-lg" id="evaluate-btn" disabled>
+                        Evaluate Risk
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="results-section" class="d-none">
+            
+            <div id="loading-spinner" class="text-center py-5">
+                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-3">Analyzing applications... This may take a moment.</p>
+            </div>
+
+            <div id="summary-results" class="d-none">
+                <div class="text-center mb-4">
+                    <h2 class="display-6">Evaluation Summary</h2>
+                    <p class="lead" id="total-applications"></p>
+                </div>
+                
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="card results-card bg-danger shadow-sm text-center">
+                            <div class="card-body">
+                                <h5 class="card-title">🔴 High Risk</h5>
+                                <p class="display-4" id="high-risk-count">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card results-card bg-warning shadow-sm text-center">
+                            <div class="card-body">
+                                <h5 class="card-title">🟡 Amber Risk</h5>
+                                <p class="display-4" id="amber-risk-count">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card results-card bg-success shadow-sm text-center">
+                            <div class="card-body">
+                                <h5 class="card-title">🟢 Low Risk</h5>
+                                <p class="display-4" id="low-risk-count">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-grid mt-4">
+                    <button class="btn btn-secondary" id="reset-btn">
+                        Process Another Batch
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Script removed as requested -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInput = document.getElementById('file-input');
+            const evaluateBtn = document.getElementById('evaluate-btn');
+            const dropZone = document.getElementById('drop-zone');
+            const dropZoneText = document.getElementById('drop-zone-text');
+            const uploadCard = document.getElementById('upload-card');
+            const resultsSection = document.getElementById('results-section');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const summaryResults = document.getElementById('summary-results');
+            const resetBtn = document.getElementById('reset-btn');
+            const totalApplications = document.getElementById('total-applications');
+            const highRiskCount = document.getElementById('high-risk-count');
+            const amberRiskCount = document.getElementById('amber-risk-count');
+            const lowRiskCount = document.getElementById('low-risk-count');
+
+            let selectedFile = null;
+
+            // Enable file selection
+            dropZone.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    selectedFile = e.target.files[0];
+                    dropZoneText.innerHTML = `<strong>File selected:</strong> ${selectedFile.name}`;
+                    evaluateBtn.disabled = false;
+                }
+            });
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('dragover');
+            });
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                if (e.dataTransfer.files.length > 0) {
+                    selectedFile = e.dataTransfer.files[0];
+                    fileInput.files = e.dataTransfer.files;
+                    dropZoneText.innerHTML = `<strong>File selected:</strong> ${selectedFile.name}`;
+                    evaluateBtn.disabled = false;
+                }
+            });
+
+            // Simulate evaluation
+            evaluateBtn.addEventListener('click', function() {
+                if (!selectedFile) return;
+                uploadCard.classList.add('d-none');
+                resultsSection.classList.remove('d-none');
+                loadingSpinner.classList.remove('d-none');
+                summaryResults.classList.add('d-none');
+
+                // Simulate backend processing delay
+                setTimeout(function() {
+                    // Simulate reading file and counting records
+                    // For demo: random number of records and random classification
+                    const total = Math.floor(Math.random() * (5000 - 500 + 1)) + 500;
+                    const high = Math.floor(total * (Math.random() * 0.15 + 0.05)); // 5-20%
+                    const mid = Math.floor(total * (Math.random() * 0.20 + 0.15)); // 15-35%
+                    const low = total - high - mid;
+
+                    totalApplications.innerText = `Based on ${total.toLocaleString()} applications in the batch.`;
+                    highRiskCount.innerText = high.toLocaleString();
+                    amberRiskCount.innerText = mid.toLocaleString();
+                    lowRiskCount.innerText = low.toLocaleString();
+
+                    loadingSpinner.classList.add('d-none');
+                    summaryResults.classList.remove('d-none');
+                }, 2000);
+            });
+
+            // Reset UI
+            resetBtn.addEventListener('click', function() {
+                selectedFile = null;
+                fileInput.value = '';
+                evaluateBtn.disabled = true;
+                dropZoneText.innerHTML = 'Drag & Drop your file here <br> or <br> <strong>Click to Browse</strong>';
+                resultsSection.classList.add('d-none');
+                uploadCard.classList.remove('d-none');
+            });
+        });
+    </script>
+</body>
+</html>
